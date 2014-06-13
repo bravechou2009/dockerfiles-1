@@ -1,0 +1,28 @@
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |v|
+  v.vm.define "boot2docker" # leaving it out names machine as 'default'
+  v.vm.box = "yungsang/boot2docker"
+  v.vm.network "private_network", ip: "192.168.33.10"
+  v.ssh.forward_agent = true
+  v.vm.synced_folder "/Users/ivo",     "/home/ivo",      :nfs => true, :mount_options => ['nolock,vers=3,udp']
+  v.vm.synced_folder "/Volumes/hdd/z", "/Volumes/hdd/z", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+
+  # Fix busybox/udhcpc issue
+  v.vm.provision :shell do |s|
+    s.inline = <<-EOT
+      if ! grep -qs ^nameserver /etc/resolv.conf; then
+        sudo /sbin/udhcpc
+      fi
+      cat /etc/resolv.conf
+    EOT
+  end
+
+  # Adjust datetime after suspend and resume
+  v.vm.provision :shell do |s|
+    s.inline = <<-EOT
+      sudo /usr/local/bin/ntpclient -s -h pool.ntp.org
+      date
+    EOT
+  end
+end
