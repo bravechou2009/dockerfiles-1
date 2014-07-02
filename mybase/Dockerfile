@@ -38,8 +38,8 @@ ENV HOME "/home/ivo"
 #
 #   docker run -t -i -v /path/to/home/:/home/ivo:rw mybase bash
 #
-# for non-native scenarios (OSX) the above that $HOME is shared over NFS from
-# the host to the guest VM (where docker runs in)
+# for non-native scenarios (OSX), above we assume that /path/to/home is shared
+# over NFS from the host to the guest VM (where docker runs in)
 
 # to have the container execute .bashrc:
 #
