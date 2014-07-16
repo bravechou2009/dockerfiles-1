@@ -2,15 +2,15 @@
 # # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.define "versosdev" do |v|
+  config.vm.define "kindev" do |v|
     v.vm.provider "docker" do |d|
       d.vagrant_vagrantfile = "/Users/ivo/machines/coreos/Vagrantfile"
       d.vagrant_machine = "coreos"
 
-      d.name = 'versosdev'
-      d.image = "ivotron:versosdev"
+      d.name = 'kindev'
+      d.image = "ivotron:kindev"
       #d.build_dir = "."
-      #d.build_args = ["--tag=ivotron:versosdev"]
+      #d.build_args = ["--tag=ivotron:kindev"]
 
       d.cmd = ["/sbin/my_init", "--enable-insecure-key"]
       #d.create_args = ["--memory=8589934592"]
