@@ -3,6 +3,8 @@
 
 require 'fileutils'
 
+Vagrant.require_version ">= 1.6.0"
+
 CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
 CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 
@@ -11,8 +13,8 @@ $num_instances = 1
 $update_channel = "alpha"
 $enable_serial_logging = false
 $vb_gui = false
-$vb_memory = 6144
-$vb_cpus = 8
+$vb_memory = 1024
+$vb_cpus = 1
 
 # Attempt to apply the deprecated environment variable NUM_INSTANCES to
 # $num_instances while allowing config.rb to override it
@@ -45,8 +47,8 @@ Vagrant.configure("2") do |config|
     config.vbguest.auto_update = false
   end
 
-  #(1..$num_instances).each do |i|
-    config.vm.define vm_name = "coreos" do |config|
+  (1..$num_instances).each do |i|
+    config.vm.define vm_name = "core-%02d" % i do |config|
       config.vm.hostname = vm_name
 
       if $enable_serial_logging
@@ -70,7 +72,7 @@ Vagrant.configure("2") do |config|
       end
 
       if $expose_docker_tcp
-        config.vm.network "forwarded_port", guest: 2375, host: ($expose_docker_tcp + 0), auto_correct: true
+        config.vm.network "forwarded_port", guest: 2375, host: ($expose_docker_tcp + i - 1), auto_correct: true
       end
 
       config.vm.provider :vmware_fusion do |vb|
@@ -83,11 +85,8 @@ Vagrant.configure("2") do |config|
         vb.cpus = $vb_cpus
       end
 
-      ip = "172.17.8.100"
+      ip = "172.17.8.#{i+100}"
       config.vm.network :private_network, ip: ip
-      config.ssh.forward_agent = true
-      config.vm.synced_folder "/Users/ivo",     "/home/ivo",      :nfs => true, :mount_options => ['nolock,vers=3,udp']
-      config.vm.synced_folder "/Volumes/hdd/z", "/Volumes/hdd/z", :nfs => true, :mount_options => ['nolock,vers=3,udp']
 
       # Uncomment below to enable NFS for sharing the host machine into the coreos-vagrant VM.
       #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => ['nolock,vers=3,udp']
@@ -97,6 +96,6 @@ Vagrant.configure("2") do |config|
         config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
       end
 
-    #end
+    end
   end
 end
