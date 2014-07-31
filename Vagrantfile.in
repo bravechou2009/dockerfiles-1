@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# # vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.define "{MACHINE_NAME}" do |v|
+    v.vm.provider "docker" do |d|
+      if Vagrant::Util::Platform.darwin?
+        d.vagrant_vagrantfile = "#{ENV['HOME']}/machines/coreos/Vagrantfile"
+        d.vagrant_machine     = "coreos"
+      end
+      d.name       = '{MACHINE_NAME}'
+      #d.image      = "ivotron:{MACHINE_NAME}"
+      d.build_dir  = "."
+      d.build_args = ["--tag=ivotron:{MACHINE_NAME}"]
+      d.cmd        = ["/sbin/my_init"]
+      d.volumes    = ["#{ENV['HOME']}/:/home/ivo:rw", "/Volumes/hdd/z:/Volumes/hdd/z:rw"]
+      d.has_ssh    = true
+    end
+    v.ssh.username         = 'ivo'
+    v.ssh.private_key_path = "#{ENV['HOME']}/.ssh/id_dsa"
+  end
+end

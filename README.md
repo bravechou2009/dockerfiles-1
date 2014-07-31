@@ -1,8 +1,6 @@
 # My Vagrant/Docker Workflow
 
 Every machine has a `Vagrantfile` and `Dockerfile` associated with it. 
-I use [boot2docker](https://github.com/boot2docker/boot2docker) or 
-[coreos](https://coreos.com) on Mac; docker directly on Linux.
 
 # install the nfs-capable boot2docker or coreos VM (for OSX)
 
@@ -11,10 +9,18 @@ cd boot2docker # or cd coreos
 vagrant up
 ```
 
-# For any other (docker-based) machine
+# For the base machine, the following has to be executed first
 
 ```bash
 cd mybase
+./generate_dockerfile
+```
+
+# For `mybase` and any other docker-based machine
+
+```bash
+cd machinename
+../generate_vagrantfile
 vagrant up --provider=docker
 ```
 
@@ -34,8 +40,3 @@ end
 The above specifies that an image named `repo/image` with tag `tag` 
 will be created out of the `Dockerfile` in the directory. See 
 [here](https://docs.vagrantup.com/v2/docker/basics.html) for more.
-
-After a docker-based VM has been launched for the first time, we have 
-to modify the `Vagrantfile` such that the VM is now launched from an 
-image (instead of building it from a `Dockerfile`), otherwise a 
-`vagrant reload` destroys the container **AND** the image.

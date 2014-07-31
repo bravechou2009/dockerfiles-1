@@ -1,2 +1,4 @@
 *.sw?
 */.vagrant
+*/Vagrantfile
+mybase/Dockerfile
