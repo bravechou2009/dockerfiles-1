@@ -15,8 +15,6 @@
 
 FROM phusion/baseimage:0.9.10
 
-# this assumes that uid=501 and gid=20 correspond's to my user in the host machine
-
 MAINTAINER Ivo Jimenez
 
 RUN sudo apt-get update

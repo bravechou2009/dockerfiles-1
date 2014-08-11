@@ -3,4 +3,4 @@
 # check if cpp exists
 command -v sed >/dev/null 2>&1 || { echo >&2 "I require sed but it's not installed.  Aborting."; exit 1; }
 
-sed -e "s/{MACHINE_NAME}/${PWD##*/}/g" ../Vagrantfile.in > Vagrantfile
+sed -e "s/{USER}/$USER/g" -e "s/{REPO}/ivotron/g" -e "s/{TAG}/${PWD##*/}/g" ../Vagrantfile.in > Vagrantfile
