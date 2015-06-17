@@ -4,13 +4,13 @@
 #   - git
 #   - vim
 
-FROM debian:jessie
+FROM ubuntu:trusty
 
 MAINTAINER Ivo Jimenez <ivo.jimenez@gmail.com>
 
 # install basic packages
 RUN apt-get update && \
-    apt-get install --yes --force-yes sudo bash-completion tmux git vim && \
+    apt-get install -yq bash-completion tmux git vim && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # add group and user for host's USER user, and add user to sudoers
