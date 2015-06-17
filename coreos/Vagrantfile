@@ -12,9 +12,12 @@ CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 $num_instances = 1
 $update_channel = "stable"
 $enable_serial_logging = false
-$vb_gui = false
-$vb_memory = 1024
+$share_home = false
+$vm_gui = false
+$vb_memory = 2048
 $vb_cpus = 8
+$shared_folders = {}
+$forwarded_ports = {}
 
 # Attempt to apply the deprecated environment variable NUM_INSTANCES to
 # $num_instances while allowing config.rb to override it
@@ -27,6 +30,9 @@ if File.exist?(CONFIG)
 end
 
 Vagrant.configure("2") do |config|
+  # always use Vagrants insecure key
+  config.ssh.insert_key = false
+
   config.vm.box = "coreos-%s" % $update_channel
   config.vm.box_version = ">= 308.0.1"
   config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
@@ -47,57 +53,72 @@ Vagrant.configure("2") do |config|
     config.vbguest.auto_update = false
   end
 
-  #(1..$num_instances).each do |i|
-    config.vm.define vm_name = "coreos" do |config|
-      config.vm.hostname = vm_name
+  config.vm.define vm_name = "coreos" do |config|
+    config.vm.hostname = vm_name
 
-      if $enable_serial_logging
-        logdir = File.join(File.dirname(__FILE__), "log")
-        FileUtils.mkdir_p(logdir)
+    if $enable_serial_logging
+      logdir = File.join(File.dirname(__FILE__), "log")
+      FileUtils.mkdir_p(logdir)
 
-        serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
-        FileUtils.touch(serialFile)
+      serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
+      FileUtils.touch(serialFile)
 
-        config.vm.provider :vmware_fusion do |v, override|
-          v.vmx["serial0.present"] = "TRUE"
-          v.vmx["serial0.fileType"] = "file"
-          v.vmx["serial0.fileName"] = serialFile
-          v.vmx["serial0.tryNoRxLoss"] = "FALSE"
-        end
-
-        config.vm.provider :virtualbox do |vb, override|
-          vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
-          vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
-        end
+      config.vm.provider :vmware_fusion do |v, override|
+        v.vmx["serial0.present"] = "TRUE"
+        v.vmx["serial0.fileType"] = "file"
+        v.vmx["serial0.fileName"] = serialFile
+        v.vmx["serial0.tryNoRxLoss"] = "FALSE"
       end
 
-      config.vm.network "forwarded_port", guest: 2375, host: (2375), auto_correct: true
-
-      config.vm.provider :vmware_fusion do |vb|
-        vb.gui = $vb_gui
-      end
-
-      config.vm.provider :virtualbox do |vb|
-        vb.gui = $vb_gui
-        vb.memory = $vb_memory
-        vb.cpus = $vb_cpus
-      end
-
-      ip = "172.17.8.100"
-      config.vm.network :private_network, ip: ip
-      config.ssh.forward_agent = true
-      config.ssh.username = "core"
-      config.vm.synced_folder "/Users/ivo",     "/home/ivo",      :nfs => true, :mount_options => ['nolock,vers=3,udp']
-      config.vm.synced_folder "/Volumes/hdd/z", "/Volumes/hdd/z", :nfs => true, :mount_options => ['nolock,vers=3,udp']
-
-      # Uncomment below to enable NFS for sharing the host machine into the coreos-vagrant VM.
-      #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => ['nolock,vers=3,udp']
-
-      if File.exist?(CLOUD_CONFIG_PATH)
-        config.vm.provision :file, :source => "#{CLOUD_CONFIG_PATH}", :destination => "/tmp/vagrantfile-user-data"
-        config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
+      config.vm.provider :virtualbox do |vb, override|
+        vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
+        vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
       end
 
     end
-  #end
+
+    config.vm.network "forwarded_port", guest: 80, host: (9080), auto_correct: true
+    config.vm.network "forwarded_port", guest: 2003, host: (2003), auto_correct: true
+    config.vm.network "forwarded_port", guest: 2375, host: (2375), auto_correct: true
+    config.vm.network "forwarded_port", guest: 8000, host: (8000), auto_correct: true
+    config.vm.network "forwarded_port", guest: 8125, host: (8125), auto_correct: true
+    config.vm.network "forwarded_port", guest: 8787, host: (8787), auto_correct: true
+
+    config.vm.provider :vmware_fusion do |vb|
+      vb.gui = $vm_gui
+    end
+
+    config.vm.provider :virtualbox do |vb|
+      vb.gui = $vm_gui
+      vb.memory = $vb_memory
+      vb.cpus = $vb_cpus
+    end
+
+    ip = "172.17.8.100"
+    config.vm.network :private_network, ip: ip
+
+    config.vm.synced_folder "/Users/ivo",     "/Users/ivo",     :nfs => true, :mount_options => ['nolock,vers=3,udp']
+    config.vm.synced_folder "/Volumes/hdd/z", "/Volumes/hdd/z", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+
+    if File.exist?(CLOUD_CONFIG_PATH)
+      config.vm.provision :file, :source => "#{CLOUD_CONFIG_PATH}", :destination => "/tmp/vagrantfile-user-data"
+      config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
+    end
+
+  end
 end
+
+# Note to self
+#
+# After a vagrant destroy, a vagrant up will create a 10GB disk which fills up 
+# quickly. In order to enlarge that partition, we have to do:
+#
+# cd .vms/COREOSFOLDER
+# VBoxManage clonehd `pwd`/coreos_production_vagrant_image.vmdk `pwd`/cloned.vdi --format vdi
+# VBoxManage modifyhd `pwd`/cloned.vdi --resize 51200 vdi # 50GB
+#
+# launch Virtualbox UI, remove old drive, add new one. TODO: find a way to do this on command line
+#
+# back in the terminal, remove old disk:
+#
+# rm `pwd`/coreos_production_vagrant_image.vmdk

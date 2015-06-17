@@ -1,32 +1,28 @@
-# ivotron:mybase (should name it ivotron/mybase:1.0) but I'm not using versioning yet
-#
-# a base image based on ubuntu with the basics:
+# a base image based with the basics:
 #   - bash-completion
 #   - tmux
 #   - git
 #   - vim
-#
-# phusion/baseimage:0.9.10 contains:
-#   - syslog-ng
-#   - crond
-#   - sshd
-#   - runit
-#   - setuser
 
-FROM phusion/baseimage:0.9.10
+FROM debian:jessie
 
-MAINTAINER Ivo Jimenez
+MAINTAINER Ivo Jimenez <ivo.jimenez@gmail.com>
 
-RUN sudo apt-get update
-RUN sudo apt-get install --yes --force-yes bash-completion tmux git vim
-RUN sudo groupadd --gid {GRPID} {USER}
-RUN sudo useradd --shell /bin/bash --home-dir /home/{USER} --uid {USRID} --gid {GRPID} {USER}
-RUN echo {USER}:{USER} | chpasswd
-RUN echo "{USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/{USER}
-RUN chmod 0440 /etc/sudoers.d/{USER}
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# install basic packages
+RUN apt-get update && \
+    apt-get install --yes --force-yes sudo bash-completion tmux git vim && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENV HOME "/home/{USER}"
+# add group and user for host's USER user, and add user to sudoers
+ADD add_user.sh /root/add_user.sh
+RUN /root/add_user.sh {USRID} {GRPID} {USER} && rm /root/add_user.sh && \
+    echo "{USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/{USER} && \
+    chmod 0440 /etc/sudoers.d/{USER}
+
+ENV HOME /home/{USER}
+WORKDIR /home/{USER}
+CMD ["bash", "-l"]
+USER {USER}
 
 # below we assume that the built image is called 'mybase', i.e. was built like:
 #
@@ -35,15 +31,7 @@ ENV HOME "/home/{USER}"
 
 # Once this base image is ready, we run it with:
 #
-#   docker run -t -i -v /path/to/home/:/home/{USER}:rw mybase bash
+#   docker run --rm -ti -v /path/to/home/:/home/{USER}:rw mybase
 #
 # for non-native scenarios (OSX), above we assume that /path/to/home is shared
 # over NFS from the host to the guest VM (where docker runs in)
-
-# to have the container execute .bashrc:
-#
-#   docker run -t -i -u {USER} bash -l
-
-# the two of the above combined:
-#
-#   docker run -t -i -u {USER} -v /path/to/home/in/folder:/home/{USER}:rw mybase bash -l
